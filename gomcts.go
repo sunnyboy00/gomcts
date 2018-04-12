@@ -7,6 +7,7 @@ import (
 )
 
 type State interface {
+	GetPlayerJustMoved() int
 	Clone() State
 	GetMoves() []Move
 	DoMove(move Move)
@@ -17,6 +18,7 @@ type Move interface {
 }
 
 type Node struct {
+	id          int
 	parent      *Node
 	state       State
 	move        Move
@@ -28,9 +30,10 @@ type Node struct {
 
 func newNode(parent *Node, state State, move Move) *Node {
 	return &Node{
-		parent: parent,
-		state:  state,
-		move:   move,
+		id:          state.GetPlayerJustMoved(),
+		parent:      parent,
+		state:       state,
+		move:        move,
 		untriedMove: state.GetMoves(),
 	}
 }
@@ -49,11 +52,7 @@ func (n *Node) UCB1() *Node {
 	return maxChild
 }
 
-func (n *Node) UpdateChildren() {
-
-}
-
-func UCT(id int, rootState State, iteration int) (Move, error) {
+func UCT(rootState State, iteration int) (Move, error) {
 	rootNode := newNode(nil, rootState, nil)
 	for i := 0; i < iteration; i++ {
 		node := rootNode
@@ -70,15 +69,16 @@ func UCT(id int, rootState State, iteration int) (Move, error) {
 			n := rand.Intn(len(node.untriedMove))
 			move := node.untriedMove[n]
 			state.DoMove(move)
-			
+
 			// Delete untried
 			node.untriedMove =
 				append(node.untriedMove[:n],
-					node.untriedMove[n+1:])
+					node.untriedMove[n+1:]...)
 
 			// Append child
 			child := newNode(node, state, move)
 			node.children = append(node.children, child)
+			node = child
 		}
 
 		// Rollout
@@ -87,11 +87,11 @@ func UCT(id int, rootState State, iteration int) (Move, error) {
 			n := rand.Intn(len(availableMoves))
 			state.DoMove(availableMoves[n])
 		}
-		
+
 		// Backpropagate
 		for node != nil {
 			node.visits++
-			win, err := state.GetResult(id)
+			win, err := state.GetResult(node.id)
 			if err != nil {
 				return nil, err
 			}

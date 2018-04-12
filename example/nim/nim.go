@@ -9,25 +9,30 @@ import (
 
 type NimState struct {
 	playerJustMoved int
-	chips int
-	maxPick int
+	chips           int
+	maxPick         int
 }
 
 func NewNimState(chips, maxPick int) *NimState {
-	return &NimState {
+	return &NimState{
 		// There are 2 players, p1 moves first.
-		playerJustMoved: 1,
-		chips: chips,
-		maxPick: maxPick,
+		playerJustMoved: 2,
+		chips:           chips,
+		maxPick:         maxPick,
 	}
 }
 
 func (s *NimState) String() string {
-	return fmt.Sprintf("Player Id:%d", s.playerJustMoved)
+	return fmt.Sprintf("PlayerJustMoved:%d, chips:%d",
+		s.playerJustMoved, s.chips)
 }
 
 func (s *NimState) Clone() gomcts.State {
 	return NewNimState(s.chips, s.maxPick)
+}
+
+func (s *NimState) GetPlayerJustMoved() int {
+	return s.playerJustMoved
 }
 
 func (s *NimState) GetMoves() []gomcts.Move {
@@ -38,9 +43,9 @@ func (s *NimState) GetMoves() []gomcts.Move {
 		pickable = s.chips
 	}
 
-	for i:=1; i<=pickable; i++ {
-		moves = append(moves, newNimMove(pickable))
-	} 
+	for i := 1; i <= pickable; i++ {
+		moves = append(moves, newNimMove(i))
+	}
 
 	return moves
 }
@@ -48,16 +53,7 @@ func (s *NimState) GetMoves() []gomcts.Move {
 func (s *NimState) DoMove(move gomcts.Move) {
 	nimMove := move.(*NimMove)
 	s.chips -= nimMove.pickChips
-	s.changePlayer()
-	// fmt.Printf("DoMove: chips: %d\n", s.chips)
-}
-
-func (s *NimState) changePlayer() {
-	if s.playerJustMoved == 1 {
-		s.playerJustMoved = 2
-	} else {
-		s.playerJustMoved = 1
-	}
+	s.playerJustMoved = 3 - s.playerJustMoved
 }
 
 func (s *NimState) GetResult(id int) (float64, error) {
