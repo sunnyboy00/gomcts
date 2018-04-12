@@ -1,4 +1,4 @@
-package mcts
+package gomcts
 
 import (
 	"math"
@@ -7,10 +7,10 @@ import (
 )
 
 type State interface {
-	DoMove(move Move)
-	GetMoves() []Move
 	Clone() State
-	GetResult() float64
+	GetMoves() []Move
+	DoMove(move Move)
+	GetResult(id int) (float64, error)
 }
 
 type Move interface {
@@ -31,6 +31,7 @@ func newNode(parent *Node, state State, move Move) *Node {
 		parent: parent,
 		state:  state,
 		move:   move,
+		untriedMove: state.GetMoves(),
 	}
 }
 
@@ -48,7 +49,11 @@ func (n *Node) UCB1() *Node {
 	return maxChild
 }
 
-func UCT(rootState State, iteration int) Move {
+func (n *Node) UpdateChildren() {
+
+}
+
+func UCT(id int, rootState State, iteration int) (Move, error) {
 	rootNode := newNode(nil, rootState, nil)
 	for i := 0; i < iteration; i++ {
 		node := rootNode
@@ -65,7 +70,7 @@ func UCT(rootState State, iteration int) Move {
 			n := rand.Intn(len(node.untriedMove))
 			move := node.untriedMove[n]
 			state.DoMove(move)
-
+			
 			// Delete untried
 			node.untriedMove =
 				append(node.untriedMove[:n],
@@ -82,18 +87,22 @@ func UCT(rootState State, iteration int) Move {
 			n := rand.Intn(len(availableMoves))
 			state.DoMove(availableMoves[n])
 		}
-
+		
 		// Backpropagate
 		for node != nil {
 			node.visits++
-			node.wins += state.GetResult()
+			win, err := state.GetResult(id)
+			if err != nil {
+				return nil, err
+			}
+			node.wins += win
 			node = node.parent
 		}
 	}
 
 	// The best move
 	sort.Sort(visitsDesc(rootNode.children))
-	return rootNode.children[0].move
+	return rootNode.children[0].move, nil
 }
 
 // Descending sort by visits
